@@ -1,0 +1,73 @@
+/* style.css */
+
+body {
+  background-color: #111;
+  color: #f1f1f1;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+
+canvas {
+  background-color: black;
+  display: block;
+  margin: 20px auto;
+  border: 4px solid #fff;
+}
+
+.titulo {
+  color: #bdf7f7;
+  margin-top: 20px;
+  font-size: 2.5em;
+  letter-spacing: 2px;
+}
+
+/* Responsivo */
+@media (max-width: 900px) {
+  canvas {
+    width: 100%;
+    height: auto;
+  }
+
+  .titulo {
+    font-size: 2em;
+  }
+}
+#selecionar-personagem {
+  position: absolute;
+  width: 735px;
+  height: 480px;
+  margin-top: 5%;
+  background: rgba(92, 78, 78, 0.9);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-left: 30%;
+  z-index: 1000;
+}
+
+#selecionar-personagem h2 {
+  margin-bottom: 25px;
+  font-size: 28px;
+  font-family: Arial, sans-serif;
+}
+.opcoes {
+  display: flex;
+  gap: 20px;
+}
+.personagem {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid white;
+  transition: transform 0.3s, border-color 0.3s;
+}
+.personagem:hover {
+  transform: scale(1.1);
+  border-color: yellow;
+}

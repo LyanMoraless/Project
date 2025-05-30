@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pac-Man Ampliado</title>
+  <link rel="stylesheet" href="style 2.css" />
+  <style>
+    #selecao-personagem {
+      font-size: 200%;
+      text-align: center;
+      margin-bottom: 10px;
+      width: 40%;
+      height: 20%;
+      position: absolute;
+      margin-left: 30%;
+      margin-top: 9%;
+    }
+
+    #selecao-personagem button {
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
+
+    #selecao-personagem img {
+      width: 140px;
+      display: flex;
+      height: 140px;
+    }
+
+    /* #pauseText {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 60px;
+      color: red;
+      background-color: white;
+      font-weight: bold;
+      pointer-events: none;
+      user-select: none;
+    } */
+  </style>
+</head>
+<body>
+  <h1 class="titulo">🎮 Pac-Man Ampliado</h1>
+
+  <div id="selecao-personagem">
+    <h2>Escolha seu Pac-Man:</h2>
+    <button onclick="selecionarPacman('img/pacman1.png')"><img src="img/pacman1.png" /></button>
+    <button onclick="selecionarPacman('img/pacman2.png')"><img src="img/pacman2.png" /></button>
+    <button onclick="selecionarPacman('img/pacman3.png')"><img src="img/pacman3.png" /></button>
+  </div>
+
+  <canvas id="game" width="885" height="690"></canvas>
+  <div id="pauseText" style="display:none;">PAUSADO</div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const linhas = 17;
+    const colunas = 22;
+    const tileSize = 40;
+    let pontos = 0;
+    let jogoIniciado = false;
+    let pausado = false;
+
+    const mapaBase = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], //1
+      [1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1], //2
+      [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1], //3
+      [1,0,1,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,1], //4
+      [1,0,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,1,0,1], //5
+      [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1], //6
+      [1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,1,0,1], //7
+      [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1], //8
+      [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1], //9
+      [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1], //10
+      [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1], //11
+      [1,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,1], //12
+      [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1], //13
+      [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1], //14
+      [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1], //15
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], //16
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]  //17
+    ];
+
+    // 3 representa power-up no mapa
+    // Adicione power-up no centro (posição ex: x=10, y=8)
+    const powerUpPos = { x: 10, y: 8 };
+    const mapa = mapaBase.map(linha => [...linha]);
+    mapa[powerUpPos.y][powerUpPos.x] = 3;
+
+    let pacman = {
+      x: 1,
+      y: 1,
+      dx: 0,
+      dy: 0,
+      imagem: null
+    };
+
+    function selecionarPacman(caminhoImagem) {
+      const img = new Image();
+      img.src = caminhoImagem;
+      img.onload = () => {
+        pacman.imagem = img;
+        document.getElementById("selecao-personagem").style.display = "none";
+        iniciarJogo(); // iniciar o loop somente após imagem carregada
+      };
+    }
+
+    function iniciarJogo() {
+      if (!jogoIniciado) {
+        jogoIniciado = true;
+        requestAnimationFrame(loop);
+      }
+    }
+
+    function carregarImagem(src) {
+      const img = new Image();
+      img.src = src;
+      return img;
+    }
+
+    const fantasmas = [
+      { x: 10, y: 10, imagem: carregarImagem('img/ghost-red.png'), dx: 1, dy: 0 },
+      { x: 15, y: 5, imagem: carregarImagem('img/ghost-pink.png'), dx: 0, dy: 1 },
+      { x: 5, y: 8, imagem: carregarImagem('img/ghost-orange.png'), dx: 1, dy: 0 },
+      { x: 18, y: 12, imagem: carregarImagem('img/ghost-cyan.png'), dx: 0, dy: -1 },
+      { x: 3, y: 14, imagem: carregarImagem('img/ghost-green.png'), dx: -1, dy: 0 }
+    ];
+
+    const ghostAzul = carregarImagem('img/ghost-blue.png'); // Fantasma azul vulnerável
+
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowUp': pacman.dx = 0; pacman.dy = -1; break;
+        case 'ArrowDown': pacman.dx = 0; pacman.dy = 1; break;
+        case 'ArrowLeft': pacman.dx = -1; pacman.dy = 0; break;
+        case 'ArrowRight': pacman.dx = 1; pacman.dy = 0; break;
+        case ' ': // tecla espaço para pausar
+          pausado = !pausado;
+          document.getElementById('pauseText').style.display = pausado ? 'block' : 'none';
+          break;
+      }
+    });
+
+    function moverPacman() {
+      const novoX = pacman.x + pacman.dx;
+      const novoY = pacman.y + pacman.dy;
+
+      if (
+        novoX >= 0 && novoX < colunas &&
+        novoY >= 0 && novoY < linhas &&
+        mapa[novoY][novoX] !== 1
+      ) {
+        pacman.x = novoX;
+        pacman.y = novoY;
+
+        if (mapa[novoY][novoX] === 0) {
+          mapa[novoY][novoX] = 2;
+          pontos += 10;
+        } else if (mapa[novoY][novoX] === 3) {
+          pegarPowerUp();
+          mapa[novoY][novoX] = 2;
+          pontos += 50;
+        }
+      }
+    }
+
+    function moverFantasma(f) {
+      const direcoes = [
+        { dx: 1, dy: 0 },
+        { dx: -1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: 0, dy: -1 }
+      ];
+
+      function podeAndar(x, y) {
+        return x >= 0 && x < colunas && y >= 0 && y < linhas && mapa[y][x] !== 1;
+      }
+
+      // Move na direção atual se possível
+      let nx = f.x + f.dx;
+      let ny = f.y + f.dy;
+
+      if (podeAndar(nx, ny)) {
+        f.x = nx;
+        f.y = ny;
+      } else {
+        // Se bater, escolhe nova direção aleatória (não oposta)
+        const oposta = { dx: -f.dx, dy: -f.dy };
+        let possiveis = direcoes.filter(d => {
+          const tx = f.x + d.dx;
+          const ty = f.y + d.dy;
+          return podeAndar(tx, ty) && !(d.dx === oposta.dx && d.dy === oposta.dy);
+        });
+        if (possiveis.length === 0) {
+          // se nenhuma opção, aceita voltar
+          possiveis = direcoes.filter(d => {
+            const tx = f.x + d.dx;
+            const ty = f.y + d.dy;
+            return podeAndar(tx, ty);
+          });
+        }
+        const novaDir = possiveis[Math.floor(Math.random() * possiveis.length)];
+        f.dx = novaDir.dx;
+        f.dy = novaDir.dy;
+        f.x += f.dx;
+        f.y += f.dy;
+      }
+    }
+
+    function desenharMapa() {
+      for (let y = 0; y < linhas; y++) {
+        for (let x = 0; x < colunas; x++) {
+          ctx.fillStyle = "black";
+          ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+
+          if (mapa[y][x] === 1) {
+            ctx.strokeStyle = "blue";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * tileSize + 8, y * tileSize + 8, tileSize - 16, tileSize - 16);
+          } else if (mapa[y][x] === 0) {
+            ctx.fillStyle = "cyan";
+            ctx.beginPath();
+            ctx.arc(x * tileSize + tileSize / 2, y * tileSize + tileSize / 2, 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (mapa[y][x] === 3) {
+            // desenhar power-up (círculo amarelo maior)
+            ctx.fillStyle = "yellow";
+            ctx.beginPath();
+            ctx.arc(x * tileSize + tileSize / 2, y * tileSize + tileSize / 2, 8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    function desenharPacman() {
+      if (pacman.imagem && pacman.imagem.complete) {
+        const tamanho = 32;
+        const offset = (tileSize - tamanho) / 2;
+        ctx.drawImage(pacman.imagem, pacman.x * tileSize + offset, pacman.y * tileSize + offset, tamanho, tamanho);
+      } else {
+        ctx.fillStyle = "yellow";
+        ctx.beginPath();
+        ctx.arc(pacman.x * tileSize + tileSize / 2, pacman.y * tileSize + tileSize / 2, tileSize / 2 - 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Controle da vulnerabilidade dos fantasmas
+    let fantasmasVulneraveis = false;
+    let tempoVulneravel = 0;
+    const duracaoVulneravel = 10000; // 10 segundos
+
+    function desenharFantasmas() {
+      const tamanho = 32;
+      const offset = (tileSize - tamanho) / 2;
+      fantasmas.forEach(f => {
+        if (fantasmasVulneraveis) {
+          // Desenha fantasma azul vulnerável
+          ctx.drawImage(ghostAzul, f.x * tileSize + offset, f.y * tileSize + offset, tamanho, tamanho);
+        } else {
+          ctx.drawImage(f.imagem, f.x * tileSize + offset, f.y * tileSize + offset, tamanho, tamanho);
+        }
+      });
+    }
+
+    function desenharPontuacao() {
+      ctx.fillStyle = "white";
+      ctx.font = "20px Arial";
+      ctx.fillText("Pontos: " + pontos, 10, 25);
+    }
+
+    let ultimoPac = 0;
+    let ultimoFantasma = 0;
+    const intervaloPac = 120;
+    const intervaloFantasma = 78;
+    let ultimoTimestamp = 0;
+
+    function pegarPowerUp() {
+      fantasmasVulneraveis = true;
+      tempoVulneravel = duracaoVulneravel;
+    }
+
+    function loop(timestamp) {
+      if (!ultimoTimestamp) ultimoTimestamp = timestamp;
+      const delta = timestamp - ultimoTimestamp;
+
+      if (!pausado) {
+        if (timestamp - ultimoPac > intervaloPac) {
+          moverPacman();
+          ultimoPac = timestamp;
+        }
+        if (timestamp - ultimoFantasma > intervaloFantasma) {
+          fantasmas.forEach(moverFantasma);
+          ultimoFantasma = timestamp;
+        }
+
+        if (fantasmasVulneraveis) {
+          tempoVulneravel -= delta;
+          if (tempoVulneravel <= 0) {
+            fantasmasVulneraveis = false;
+          }
+        }
+      }
+
+      ultimoTimestamp = timestamp;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      desenharMapa();
+      desenharPacman();
+      desenharFantasmas();
+      desenharPontuacao();
+
+      requestAnimationFrame(loop);
+    }
+  </script>
+</body>
+</html>
